@@ -4,7 +4,7 @@ This guide covers local setup for the Machi mobile app.
 
 ## Stack
 
-- Expo SDK 55
+- Expo SDK 53
 - React Native 0.83
 - TypeScript
 - React Navigation
@@ -17,7 +17,7 @@ Install the following before running the app:
 - Node.js 20 or newer
 - npm 10 or newer
 - Git
-- Expo Go on an Android or iOS device, or an Android emulator / iOS simulator
+- Expo Go 54.0.8 on an Android or iOS device, or an Android emulator / iOS simulator
 
 To verify your environment:
 
@@ -128,6 +128,8 @@ If Expo reports package version mismatches:
 ```bash
 npx expo install
 ```
+
+If you see an "Incompatible SDK version" message in Expo Go, update Expo Go or rebuild your dev client so it matches Expo SDK 53. That error is usually coming from the runtime app on your device, not from this repository's package versions.
 
 ### SQLite issues
 
