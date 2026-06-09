@@ -6,6 +6,7 @@ import { AppBackground } from "../components/ui/AppBackground";
 import { AppHeader } from "../components/ui/AppHeader";
 import { MachiButton } from "../components/ui/MachiButton";
 import { SectionCard } from "../components/ui/SectionCard";
+import { CircularSlider } from "../components/ui/CircularSlider";
 import { useAppState } from "../state/AppContext";
 import { tokens } from "../theme/tokens";
 
@@ -19,25 +20,29 @@ function formatSeconds(totalSeconds: number): string {
   return `${minutes}:${seconds}`;
 }
 
-function DurationControl({
-  label,
+function BreakDurationControl({
   value,
   onChange,
 }: {
-  label: string;
   value: number;
   onChange: (next: number) => void;
 }) {
   return (
     <View style={styles.durationCard}>
-      <Text style={styles.durationLabel}>{label}</Text>
+      <Text style={styles.durationLabel}>Break Length</Text>
       <View style={styles.durationRow}>
-        <Pressable style={styles.adjustButton} onPress={() => onChange(Math.max(5, value - 5))}>
-          <Text style={styles.adjustButtonText}>-5</Text>
+        <Pressable
+          style={({ pressed }) => [styles.adjustButton, pressed && styles.adjustButtonPressed]}
+          onPress={() => onChange(Math.max(1, value - 1))}
+        >
+          <Text style={styles.adjustButtonText}>-1</Text>
         </Pressable>
         <Text style={styles.durationValue}>{value} min</Text>
-        <Pressable style={styles.adjustButton} onPress={() => onChange(Math.min(90, value + 5))}>
-          <Text style={styles.adjustButtonText}>+5</Text>
+        <Pressable
+          style={({ pressed }) => [styles.adjustButton, pressed && styles.adjustButtonPressed]}
+          onPress={() => onChange(Math.min(30, value + 1))}
+        >
+          <Text style={styles.adjustButtonText}>+1</Text>
         </Pressable>
       </View>
     </View>
@@ -45,7 +50,7 @@ function DurationControl({
 }
 
 export function FocusTimerScreen() {
-  const { settings, completeFocusSession, buildings, currentUser } = useAppState();
+  const { settings, completeFocusSession, buildings } = useAppState();
   const [focusMinutes, setFocusMinutes] = useState(settings.focusMinutes);
   const [breakMinutes, setBreakMinutes] = useState(settings.breakMinutes);
   const [remainingSeconds, setRemainingSeconds] = useState(settings.focusMinutes * 60);
@@ -93,11 +98,6 @@ export function FocusTimerScreen() {
     setRemainingSeconds(settings.focusMinutes * 60);
   }, [isRunning, settings.breakMinutes, settings.focusMinutes]);
 
-  const progress = useMemo(() => {
-    const total = focusMinutes * 60;
-    return total === 0 ? 0 : remainingSeconds / total;
-  }, [focusMinutes, remainingSeconds]);
-
   const spotlightBuilding = buildings[buildings.length - 1];
 
   const handleStart = () => {
@@ -117,49 +117,90 @@ export function FocusTimerScreen() {
     setRemainingSeconds(focusMinutes * 60);
   };
 
+  const handleSliderChange = (newMins: number) => {
+    if (!isRunning) {
+      setFocusMinutes(newMins);
+      setRemainingSeconds(newMins * 60);
+    }
+  };
+
   return (
     <AppBackground>
       <View style={styles.root}>
-        <AppHeader title="FOCUS" subtitle="Pomodoro defaults with editable focus and break lengths." />
+        <AppHeader title="FOCUS" subtitle="POMODORO CITY BUILDER" />
 
-        <View style={styles.heroWrap}>
-          <View style={styles.planetOutline} />
-          <ImageBackground source={cityBackground} style={styles.heroPlanet} imageStyle={styles.heroImage}>
-            {spotlightBuilding ? (
-              <Image source={getBuildingSprite(spotlightBuilding.type, spotlightBuilding.variantIndex)} resizeMode="contain" style={styles.heroBuilding} />
-            ) : null}
-          </ImageBackground>
+        {/* Circular Slider wrapping the city planet */}
+        <View style={styles.sliderWrapper}>
+          <View pointerEvents={isRunning ? "none" : "auto"}>
+            <CircularSlider
+              value={focusMinutes}
+              onChange={handleSliderChange}
+              min={0}
+              max={120}
+              step={1}
+              size={240}
+            >
+              <ImageBackground
+                source={cityBackground}
+                style={styles.heroPlanet}
+                imageStyle={styles.heroImage}
+              >
+                {spotlightBuilding ? (
+                  <Image
+                    source={getBuildingSprite(spotlightBuilding.type, spotlightBuilding.variantIndex)}
+                    resizeMode="contain"
+                    style={styles.heroBuilding}
+                  />
+                ) : null}
+              </ImageBackground>
+            </CircularSlider>
+          </View>
         </View>
 
+        {/* Mayor Name Tag Pill */}
         <View style={styles.tagPill}>
           <View style={styles.tagDot} />
-          <Text style={styles.tagText}>{currentUser?.username || "Planning"}</Text>
+          <Text style={styles.tagText}>{settings.mayorName || "Mayor"}</Text>
         </View>
 
+        {/* Big Countdown Timer Card */}
         <SectionCard style={styles.timerCard}>
           <Text style={styles.timerValue}>{formatSeconds(remainingSeconds)}</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.max(4, progress * 100)}%` }]} />
-          </View>
-          <Text style={styles.caption}>Break after completion: {breakMinutes} minutes</Text>
+          <Text style={styles.caption}>
+            {isRunning ? "Focusing..." : "Drag slider ring to set time"}
+          </Text>
         </SectionCard>
 
-        <DurationControl
-          label="Focus Length"
-          value={focusMinutes}
-          onChange={(next) => {
-            setFocusMinutes(next);
-            setRemainingSeconds(next * 60);
-          }}
-        />
-        <DurationControl label="Break Length" value={breakMinutes} onChange={setBreakMinutes} />
+        {/* Break Duration Setup */}
+        {!isRunning && (
+          <BreakDurationControl value={breakMinutes} onChange={setBreakMinutes} />
+        )}
 
-        <View style={styles.actionsRow}>
-          <MachiButton label={isRunning ? "RESTART" : "START"} onPress={handleStart} style={styles.primaryAction} />
-          <Pressable style={[styles.actionButton, styles.secondaryButton]} onPress={handlePause}>
+        {/* Actions Row */}
+        <View style={[styles.actionsRow, isRunning && styles.actionsRowRunning]}>
+          <MachiButton
+            label={isRunning ? "RUNNING" : "START"}
+            onPress={handleStart}
+            style={styles.primaryAction}
+          />
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.secondaryButton,
+              pressed && styles.actionButtonPressed,
+            ]}
+            onPress={handlePause}
+          >
             <Text style={styles.secondaryText}>Pause</Text>
           </Pressable>
-          <Pressable style={[styles.actionButton, styles.secondaryButton]} onPress={handleReset}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.secondaryButton,
+              pressed && styles.actionButtonPressed,
+            ]}
+            onPress={handleReset}
+          >
             <Text style={styles.secondaryText}>Reset</Text>
           </Pressable>
         </View>
@@ -174,26 +215,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 44,
     paddingBottom: 16,
+    justifyContent: "space-between",
   },
-  heroWrap: {
-    marginTop: 18,
-    height: 210,
+  sliderWrapper: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  planetOutline: {
-    position: "absolute",
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    borderWidth: 4,
-    borderColor: "rgba(116,155,194,0.65)",
+    marginVertical: 18,
   },
   heroPlanet: {
-    width: 172,
-    height: 172,
-    borderRadius: 86,
-    overflow: "hidden",
+    width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#BFE4FF",
@@ -202,21 +233,21 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   heroBuilding: {
-    width: 106,
-    height: 136,
-    marginTop: 22,
+    width: 90,
+    height: 120,
+    marginTop: 18,
   },
   tagPill: {
     alignSelf: "center",
     minHeight: 30,
     paddingHorizontal: 14,
     borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.65)",
+    backgroundColor: "rgba(255,255,255,0.75)",
     borderWidth: 1,
     borderColor: tokens.color.shadow,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   tagDot: {
     width: 10,
@@ -232,44 +263,38 @@ const styles = StyleSheet.create({
   },
   timerCard: {
     alignItems: "center",
+    paddingVertical: 18,
+    marginHorizontal: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
   },
   timerValue: {
     fontFamily: tokens.font.bodyBold,
     color: tokens.color.primaryDark,
-    fontSize: 48,
+    fontSize: 54,
     fontWeight: "900",
     letterSpacing: 8,
   },
-  progressTrack: {
-    height: 12,
-    width: "100%",
-    borderRadius: 999,
-    backgroundColor: "#DCEFFC",
-    marginTop: tokens.space.md,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: tokens.color.primary,
-  },
   caption: {
-    marginTop: 10,
+    marginTop: 6,
     color: "#60758A",
+    fontSize: 13,
+    fontFamily: tokens.font.body,
   },
   durationCard: {
-    marginTop: tokens.space.md,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    marginHorizontal: 10,
+    backgroundColor: "rgba(255,255,255,0.75)",
     borderRadius: tokens.radius.md,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.08)",
-    padding: tokens.space.md,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   durationLabel: {
     color: tokens.color.primaryDark,
     fontWeight: "700",
-    marginBottom: 10,
+    marginBottom: 8,
     fontFamily: tokens.font.display,
+    fontSize: 14,
   },
   durationRow: {
     flexDirection: "row",
@@ -283,14 +308,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   adjustButton: {
-    minWidth: 56,
+    minWidth: 50,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.sm,
     backgroundColor: tokens.color.card,
     borderColor: tokens.color.border,
     borderWidth: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
+  },
+  adjustButtonPressed: {
+    opacity: 0.6,
   },
   adjustButtonText: {
     color: tokens.color.ink,
@@ -299,8 +327,12 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     gap: tokens.space.sm,
-    marginTop: tokens.space.lg,
+    marginTop: 12,
+    marginHorizontal: 10,
     alignItems: "center",
+  },
+  actionsRowRunning: {
+    marginTop: 40, // push down slightly if no break control shown
   },
   actionButton: {
     flex: 1,
@@ -309,20 +341,16 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.md,
     paddingVertical: 14,
   },
-  primaryButton: {
-    backgroundColor: tokens.color.primary,
+  actionButtonPressed: {
+    opacity: 0.7,
   },
   primaryAction: {
-    flex: 1.3,
+    flex: 1.4,
   },
   secondaryButton: {
     backgroundColor: "rgba(255,255,255,0.85)",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.08)",
-  },
-  primaryText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
   },
   secondaryText: {
     color: tokens.color.ink,

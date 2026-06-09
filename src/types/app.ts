@@ -24,6 +24,7 @@ export interface AppSettings {
   focusMinutes: number;
   breakMinutes: number;
   cityColumns: number;
+  mayorName?: string;
 }
 
 export interface AppStats {

@@ -4,8 +4,8 @@ This guide covers local setup for the Machi mobile app.
 
 ## Stack
 
-- Expo SDK 53
-- React Native 0.83
+- Expo SDK 54
+- React Native 0.81
 - TypeScript
 - React Navigation
 - Local SQLite via `expo-sqlite`
@@ -129,7 +129,7 @@ If Expo reports package version mismatches:
 npx expo install
 ```
 
-If you see an "Incompatible SDK version" message in Expo Go, update Expo Go or rebuild your dev client so it matches Expo SDK 53. That error is usually coming from the runtime app on your device, not from this repository's package versions.
+If you see an "Incompatible SDK version" message in Expo Go, update Expo Go or rebuild your dev client so it matches Expo SDK 54. That error is usually coming from the runtime app on your device, not from this repository's package versions.
 
 ### SQLite issues
 

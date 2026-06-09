@@ -2,11 +2,10 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import { runMigrations } from "../db/migrations";
 import { listSessions, createCompletedSession, clearSessions } from "../db/repositories/sessionsRepo";
 import { listBuildings, insertBuilding, getNextGridPosition, clearBuildings } from "../db/repositories/buildingsRepo";
-import { DEFAULT_SETTINGS, getSettings, getSettingValue, saveSettings, setSettingValue } from "../db/repositories/settingsRepo";
-import { createUser, findUserByLogin, getUserById } from "../db/repositories/usersRepo";
+import { DEFAULT_SETTINGS, getSettings, saveSettings } from "../db/repositories/settingsRepo";
 import { pickBuildingType, pickVariantIndex } from "../services/rewardEngine";
 import { deriveStats, computeCurrentStreak } from "../services/statsService";
-import { AppSettings, AppStats, BuildingRecord, SessionRecord, UserProfile } from "../types/app";
+import { AppSettings, AppStats, BuildingRecord, SessionRecord } from "../types/app";
 
 interface AppContextValue {
   ready: boolean;
@@ -15,14 +14,10 @@ interface AppContextValue {
   buildings: BuildingRecord[];
   settings: AppSettings;
   stats: AppStats;
-  currentUser: UserProfile | null;
   refresh: () => Promise<void>;
   completeFocusSession: (focusMinutes: number, breakMinutes: number, startedAtIso: string) => Promise<void>;
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   resetData: () => Promise<void>;
-  login: (loginValue: string, password: string) => Promise<boolean>;
-  register: (input: Omit<UserProfile, "id"> & { password: string }) => Promise<boolean>;
-  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -33,32 +28,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [buildings, setBuildings] = useState<BuildingRecord[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const stats = useMemo(() => deriveStats(sessions), [sessions]);
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const [nextSettings, nextSessions, nextBuildings, currentUserId] = await Promise.all([
+      const [nextSettings, nextSessions, nextBuildings] = await Promise.all([
         getSettings(),
         listSessions(250),
         listBuildings(),
-        getSettingValue("currentUserId"),
       ]);
-
-      const nextUser = currentUserId ? await getUserById(Number(currentUserId)) : null;
 
       setSettings(nextSettings);
       setSessions(nextSessions);
       setBuildings(nextBuildings);
-      setCurrentUser(nextUser ? {
-        id: nextUser.id,
-        email: nextUser.email,
-        username: nextUser.username,
-        age: nextUser.age,
-        gender: nextUser.gender,
-      } : null);
     } finally {
       setLoading(false);
     }
@@ -110,45 +94,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await refresh();
   };
 
-  const login = async (loginValue: string, password: string) => {
-    const user = await findUserByLogin(loginValue, password);
-    if (!user) {
-      return false;
-    }
-
-    await setSettingValue("currentUserId", String(user.id));
-    await refresh();
-    return true;
-  };
-
-  const register = async (input: Omit<UserProfile, "id"> & { password: string }) => {
-    try {
-      const userId = await createUser({
-        email: input.email.trim(),
-        username: input.username.trim(),
-        password: input.password,
-        age: input.age.trim(),
-        gender: input.gender.trim(),
-      });
-
-      await setSettingValue("currentUserId", String(userId));
-      await refresh();
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const logout = async () => {
-    await setSettingValue("currentUserId", "");
-    await refresh();
-  };
-
   const resetData = async () => {
     await clearBuildings();
     await clearSessions();
     await saveSettings(DEFAULT_SETTINGS);
-    await setSettingValue("currentUserId", "");
     await refresh();
   };
 
@@ -159,14 +108,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     buildings,
     settings,
     stats,
-    currentUser,
     refresh,
     completeFocusSession,
     updateSettings,
     resetData,
-    login,
-    register,
-    logout,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

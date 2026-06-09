@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   focusMinutes: 25,
   breakMinutes: 5,
   cityColumns: 5,
+  mayorName: "Mayor",
 };
 
 export async function getSettings(): Promise<AppSettings> {
@@ -20,6 +21,7 @@ export async function getSettings(): Promise<AppSettings> {
     focusMinutes: Number(map.focusMinutes ?? DEFAULT_SETTINGS.focusMinutes),
     breakMinutes: Number(map.breakMinutes ?? DEFAULT_SETTINGS.breakMinutes),
     cityColumns: Number(map.cityColumns ?? DEFAULT_SETTINGS.cityColumns),
+    mayorName: map.mayorName ?? DEFAULT_SETTINGS.mayorName,
   };
 }
 

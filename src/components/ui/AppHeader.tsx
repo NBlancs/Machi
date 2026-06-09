@@ -9,7 +9,6 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <Text style={styles.menu}>≡</Text>
     </View>
   );
 }
@@ -20,6 +19,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 10,
   },
   title: {
     fontFamily: tokens.font.display,
@@ -33,10 +33,5 @@ const styles = StyleSheet.create({
     fontFamily: tokens.font.body,
     fontSize: 13,
     color: "#6A8097",
-  },
-  menu: {
-    color: tokens.color.primaryDark,
-    fontSize: 34,
-    lineHeight: 34,
   },
 });
